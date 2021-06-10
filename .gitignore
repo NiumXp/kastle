@@ -1,0 +1,15 @@
+# Working files
+.venv
+.vscode
+.project
+
+# Documentation files
+docs/_build
+
+# Packaging files
+build
+dist
+*.egg-info
+
+# Python files
+__pycache__
