@@ -22,35 +22,34 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 '''
 
-from typing import Optional
-
-from .server import Server
-from .router import Router
-
-
-_DEFAULT_HOST = 'localhost'
-_DEFAULT_PORT = 3000
+class KastleError(Exception):
+    """Base exception for library.
+    
+    All other errors inherit from this class.
+    """
 
 
-class Kastle(Router):
-    __slots__  = ('server',)
+class RouterError(KastleError):
+    """Exception that will be used for router-related errors."""
 
-    def __init__(self):
-        super().__init__()
-        self.server = Server()
 
-    async def listen(
-        self,
-        host: Optional[str] = _DEFAULT_HOST,
-        port: Optional[int] = _DEFAULT_PORT
-    ) -> None:
-        """Starts a WSGI server.
+class InvalidHTTPMethod(RouterError):
+    """Exception that is thrown when an invalid HTTP method is
+    given.
+    """
 
-        Parameters
-        ----------
-        host: Optional[:class:`str`]
-            The hostname to listen on. Defaults to ``localhost``.
-        port: Optional[:class:`int`]
-            The port of the webserver. Defaults to ``3000``.
-        """
-        await self.server.serve(host, port)
+    def __init__(self, method: str):
+        super().__init__(f'{method} is not a valid HTTP method')
+
+
+class InvalidPath(RouterError):
+    """Exception that is thrown when an invalid path is given."""
+
+
+class RouteAlreadyExists(RouterError):
+    """Exception that is thrown when a route to a path already
+    exists.
+    """
+
+    def __init__(self, method: str, path: str):
+        super().__init__(f'route {method} {path} already exists')
