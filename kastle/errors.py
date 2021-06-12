@@ -53,3 +53,19 @@ class RouteAlreadyExists(RouterError):
 
     def __init__(self, method: str, path: str):
         super().__init__(f'route {method} {path} already exists')
+
+
+class ServerError(KastleError):
+    pass
+
+
+class HTTPVersionNotSupported(ServerError):
+    pass
+
+
+class BadRequest(ServerError):
+    pass
+
+
+class NotFound(ServerError):
+    pass

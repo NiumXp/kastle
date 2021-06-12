@@ -23,11 +23,45 @@ SOFTWARE.
 '''
 
 import asyncio
+import traceback
+from http import HTTPStatus
+from typing import Optional
 
+from . import errors
 from .utils import log
+from .connection import Connection
 
 
-_RECV_BYTES = 1024
+class ServerResponse:
+    def __init__(self, status: HTTPStatus, data: Optional[bytes]=None) -> None:
+        self._status = status
+        self._headers = {}
+        self.data = data
+
+    def add_header(self, name: str, value: str) -> None:
+        self._headers[name] = value
+
+    def to_bytes(self) -> bytes:
+        lines = []
+
+        lines.append("HTTP/1.1 {0.value} {0.phrase}".format(self._status))
+
+        for name, value in self._headers.items():
+            lines.append(f"{name}:{value}")
+
+        lines.append('')
+
+        data = self.data
+        if not data:
+            data = ''
+        else:
+            self.add_header("Content-Length", len(data))
+
+        lines.append(data)
+
+        lines = [line.encode('ascii') for line in lines]
+
+        return b"\r\n".join(lines)
 
 
 class Server:
@@ -39,12 +73,28 @@ class Server:
         self.port = None
         self.socket = None
 
+    def can_handle(self, verb, target) -> bool:
+        return True
+
+    async def http_error(self, status: HTTPStatus, error, connection):
+        response = ServerResponse(status)
+        response.data = str(error)
+
+        response = response.to_bytes()
+
+        try:
+            await connection.send(response)
+        except Exception:
+            traceback.print_exc()
+
+        await connection.close()
+
     async def serve(self, host: str, port: int):
         self.host = host
         self.port = port
 
         self.socket = await asyncio.start_server(
-            self.connection_callback,
+            self._handle_raw_connection,
             host, port
         )
 
@@ -52,14 +102,37 @@ class Server:
 
         await self.socket.serve_forever()
 
-    async def connection_callback(
+    async def _handle_raw_connection(
         self,
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter
-    ):
-        received_data = await reader.read(n=_RECV_BYTES)
+    ) -> None:
+        connection = Connection(self, reader, writer)
 
-        writer.write(b'HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK')
-        await writer.drain()
+        request = None
+        try:
+            request = await connection.parse()
+        except errors.HTTPVersionNotSupported as e:
+            return await self.http_error(HTTPStatus.HTTP_VERSION_NOT_SUPPORTED,e, connection)
+        except errors.BadRequest as e:
+            return await self.http_error(HTTPStatus.BAD_REQUEST, e, connection)
+        except errors.NotFound as e:
+            return await self.http_error(HTTPStatus.NOT_FOUND, e, connection)
+        except Exception as e:
+            return await self.http_error(HTTPStatus.INTERNAL_SERVER_ERROR, e, connection)
 
-        writer.close()
+        if request is None:
+            return await connection.close()
+
+        try:
+            await self._handle_connection(request, connection)
+        except Exception as e:
+            return await self.http_error(HTTPStatus.INTERNAL_SERVER_ERROR, e, connection)
+
+        await connection.close()
+
+    async def _handle_connection(self, request, connection) -> None:
+        response = ServerResponse(HTTPStatus.OK, "OK")
+        response = response.to_bytes()
+
+        await connection.send(response)
