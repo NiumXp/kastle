@@ -10,8 +10,8 @@ CRLN = b"\r\n"
 class Request:
     __slots__ = ("verb", "target", "version", "_headers", "_body")
 
-    def __init__(self, verb: bytes, target: bytes, version: bytes) -> None:
-        self.verb = verb
+    def __init__(self, method: bytes, target: bytes, version: bytes) -> None:
+        self.method = method
         self.target = target
         self.version = version
 
@@ -59,7 +59,7 @@ class Connection:
         firstline = await self.reader.readline()
 
         try:
-            verb, target, version = firstline.split(b' ')
+            method, target, version = firstline.split(b' ')
         except ValueError:
             raise errors.BadRequest(firstline)
 
@@ -68,10 +68,10 @@ class Connection:
         if version != b"HTTP/1.1":
             raise errors.HTTPVersionNotSupported(version)
 
-        if not self.server.can_handle(verb, target):
-            raise errors.NotFound(verb, target)
+        if not self.server.can_handle(method, target):
+            raise errors.NotFound(method, target)
 
-        request = Request(verb, target, version)
+        request = Request(method, target, version)
 
         headers = []
         async for line in self.reader:
