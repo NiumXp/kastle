@@ -1,6 +1,5 @@
 import asyncio
-from typing import Optional, Dict
-from functools import cached_property
+from typing import Dict
 
 from . import errors
 
