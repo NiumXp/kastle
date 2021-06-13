@@ -3,7 +3,7 @@ from typing import Dict
 
 from . import errors
 
-CRLN = b"\r\n"
+CRLF = b"\r\n"
 
 
 class Request:
@@ -62,7 +62,7 @@ class Connection:
         except ValueError:
             raise errors.BadRequest(firstline)
 
-        version = version.strip(CRLN)
+        version = version.strip(CRLF)
 
         if version != b"HTTP/1.1":
             raise errors.HTTPVersionNotSupported(version)
@@ -74,7 +74,7 @@ class Connection:
 
         headers = []
         async for line in self.reader:
-            if line == CRLN:
+            if line == CRLF:
                 break
 
             headers.append(line)
