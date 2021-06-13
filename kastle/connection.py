@@ -39,13 +39,13 @@ class Connection:
     __slots__ = ("server", "reader", "writer")
 
     def __init__(self,
-                 s,
-                 r: asyncio.StreamReader,
-                 w: asyncio.StreamWriter) -> None:
+                 server,
+                 reader: asyncio.StreamReader,
+                 writer: asyncio.StreamWriter) -> None:
 
-        self.server = s
-        self.reader = r
-        self.writer = w
+        self.server = server
+        self.reader = reader
+        self.writer = writer
 
     async def close(self) -> None:
         self.writer.close()
