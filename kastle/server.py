@@ -33,7 +33,7 @@ from .connection import Connection
 
 
 class ServerResponse:
-    def __init__(self, status: HTTPStatus, data: Optional[bytes]=None) -> None:
+    def __init__(self, status: HTTPStatus, data: Optional[bytes] = None) -> None:
         self._status = status
         self._headers = {}
         self.data = data
